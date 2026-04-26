@@ -13,28 +13,39 @@ document.getElementById('record-btn').onclick = async () => {
     const recordBtn = document.getElementById('record-btn');
     recordBtn.disabled = true;
 
-    // Request microphone access FIRST so permission popups don't ruin the timer
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream);
-    const audioChunks = [];
+    try {
+        // Request microphone access FIRST so permission popups don't ruin the timer
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        const audioChunks = [];
 
-    // Countdown Logic
-    let countdown = 3;
-    recordBtn.innerText = `Get ready... ${countdown}`;
+        // Countdown Logic
+        let countdown = 3;
+        recordBtn.innerText = `Get ready... ${countdown}`;
 
-    const timer = setInterval(() => {
-        countdown--;
-        if (countdown > 0) {
-            recordBtn.innerText = `Get ready... ${countdown}`;
-        } else {
-            // Stop the countdown timer
-            clearInterval(timer);
-            
-            // Start the actual recording
-            recordBtn.innerText = "🔴 Listening... (5 Seconds)";
-            startRecording(stream, mediaRecorder, audioChunks, recordBtn);
-        }
-    }, 1000); 
+        const timer = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                recordBtn.innerText = `Get ready... ${countdown}`;
+            } else {
+                // Stop the countdown timer
+                clearInterval(timer);
+                
+                // Start the actual recording
+                recordBtn.innerText = "🔴 Listening... (5 Seconds)";
+                startRecording(stream, mediaRecorder, audioChunks, recordBtn);
+            }
+        }, 1000); 
+
+    } catch (error) {
+        // --- THE MOBILE FIX ---
+        // If the mic fails, print the exact error to the screen!
+        document.getElementById('status').innerText = `⚠️ Mic Error: ${error.message}`;
+        document.getElementById('status').style.color = "#facc15"; // Turn text yellow
+        
+        recordBtn.innerText = "Microphone Blocked";
+        console.error("Microphone access failed:", error);
+    }
 };
 
 // Helper function to handle the actual recording
