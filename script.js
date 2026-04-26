@@ -3,7 +3,7 @@ let aiTopGuesses = [];
 // -----------------------------------------
 // 1. Initialize UI 
 // -----------------------------------------
-document.getElementById('status').innerText = "AI Ready! Pass to Performer.";
+document.getElementById('status').innerText = "Sound Interpreter AI ready!";
 document.getElementById('performer-screen').classList.remove('hidden');
 
 // -----------------------------------------
@@ -31,7 +31,7 @@ document.getElementById('record-btn').onclick = async () => {
             clearInterval(timer);
             
             // Start the actual recording
-            recordBtn.innerText = "🔴 Listening... (5s)";
+            recordBtn.innerText = "🔴 Listening... (5 Seconds)";
             startRecording(stream, mediaRecorder, audioChunks, recordBtn);
         }
     }, 1000); 
