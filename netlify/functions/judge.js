@@ -12,7 +12,7 @@ export const handler = async (event) => {
              return { statusCode: 200, body: JSON.stringify({ error: "Missing GEMINI_API_KEY in Netlify" }) };
         }
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         const prompt = "You are a judge in a game of sound charades. Listen to this audio clip of a human imitating a sound. What are the top 5 things they are trying to imitate? Keep the guesses simple. Reply ONLY with a comma-separated list, all lowercase. Example: dog, car engine, wind, ghost, crying.";
 
         const response = await fetch(url, {
