@@ -1,90 +1,93 @@
-import { AudioClassifier, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-audio@0.10.0";
-
-let audioClassifier;
+// Global variable to store the AI's answers
 let aiTopGuesses = [];
 
 // -----------------------------------------
-// 1. Initialize AI
+// 1. Initialize UI (No downloads needed anymore!)
 // -----------------------------------------
-async function initAI() {
-    const audio = await FilesetResolver.forAudioTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-audio@0.10.0/wasm");
-    audioClassifier = await AudioClassifier.createFromOptions(audio, {
-        baseOptions: {
-            modelAssetPath: "https://storage.googleapis.com/mediapipe-models/audio_classifier/yamnet/float32/1/yamnet.tflite"
-        }
-    });
-    document.getElementById('status').innerText = "AI Ready! Pass to Performer.";
-    document.getElementById('performer-screen').classList.remove('hidden');
-}
+// The AI is on the server now, so the game is instantly ready.
+document.getElementById('status').innerText = "AI Ready! Pass to Performer.";
+document.getElementById('performer-screen').classList.remove('hidden');
 
 // -----------------------------------------
-// 2. Handle Recording and AI Prediction
+// 2. Handle Recording and AI Request
 // -----------------------------------------
 document.getElementById('record-btn').onclick = async () => {
+    // Request microphone access
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mediaRecorder = new MediaRecorder(stream);
     const audioChunks = [];
 
+    // Update UI
     const recordBtn = document.getElementById('record-btn');
     recordBtn.innerText = "🔴 Listening... (3s)";
     recordBtn.disabled = true;
 
+    // Collect audio data
     mediaRecorder.addEventListener("dataavailable", event => {
         audioChunks.push(event.data);
     });
 
+    // Process audio when recording stops
     mediaRecorder.addEventListener("stop", async () => {
-        document.getElementById('status').innerText = "AI is thinking...";
+        document.getElementById('status').innerText = "Smart AI is thinking...";
 
-        const audioBlob = new Blob(audioChunks);
-        const arrayBuffer = await audioBlob.arrayBuffer();
-
-        // Decode audio at 16kHz for YAMNet
-        const audioCtx = new AudioContext({ sampleRate: 16000 });
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        const channelData = audioBuffer.getChannelData(0);
-
-        // Feed data to the AI
-        const results = audioClassifier.classify(channelData);
-
-        // Extract the TOP 5 Guesses
-        aiTopGuesses = [];
-        if (results.length > 0 && results[0].classifications.length > 0) {
-            const categories = results[0].classifications[0].categories;
-            
-            // Loop through the top 5
-            for (let i = 0; i < Math.min(5, categories.length); i++) {
-                 // Only include if the AI is at least 5% confident
-                 if (categories[i].score > 0.05) {
-                     aiTopGuesses.push(categories[i].categoryName.toLowerCase());
-                 }
-            }
-            console.log("AI Top 5 Guesses:", aiTopGuesses);
-        } else {
-            aiTopGuesses = ["unknown noise"];
-        }
-
-        // Shut down the microphone
-        stream.getTracks().forEach(track => track.stop());
-
-        // Update UI
-        document.getElementById('performer-screen').classList.add('hidden');
-        document.getElementById('guesser-screen').classList.remove('hidden');
-        document.getElementById('status').innerText = "Pass the laptop!";
+        // Combine chunks into a single webm audio file
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
         
-        recordBtn.innerText = "Record Sound (3s)";
-        recordBtn.disabled = false;
+        // Convert the audio file into a Base64 string so we can send it as text
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+            // Remove the "data:audio/webm;base64," prefix to get raw data
+            const base64Audio = reader.result.split(',')[1]; 
+
+            try {
+                // Send it to your hidden Netlify Function
+                const response = await fetch('/.netlify/functions/judge', {
+                    method: 'POST',
+                    body: JSON.stringify({ audioBase64: base64Audio })
+                });
+
+                const data = await response.json();
+                
+                if (data.guesses) {
+                    aiTopGuesses = data.guesses;
+                    console.log("Smart AI Guesses:", aiTopGuesses);
+                } else {
+                    aiTopGuesses = ["error: couldn't understand audio"];
+                }
+            } catch (error) {
+                console.error("Failed to reach Netlify Function:", error);
+                aiTopGuesses = ["error: server connection failed"];
+            }
+
+            // Shut down the microphone
+            stream.getTracks().forEach(track => track.stop());
+
+            // Update UI for the Guesser
+            document.getElementById('performer-screen').classList.add('hidden');
+            document.getElementById('guesser-screen').classList.remove('hidden');
+            document.getElementById('status').innerText = "Pass the laptop!";
+            
+            // Reset button state
+            recordBtn.innerText = "Record Sound (3s)";
+            recordBtn.disabled = false;
+        };
     });
 
+    // Start recording
     mediaRecorder.start();
-    setTimeout(() => { mediaRecorder.stop(); }, 3000);
+
+    // Automatically stop after 3 seconds
+    setTimeout(() => {
+        mediaRecorder.stop();
+    }, 3000);
 };
 
-
 // -----------------------------------------
-// 3. Fuzzy Matching Logic (The "Forgiving" Judge)
+// 3. Fuzzy Matching Logic (Typo Forgiveness)
 // -----------------------------------------
-// Calculates how many typos (edit distance) exist between two words
+// Calculates how many typos exist between two words
 function getTypoCount(str1, str2) {
     if (str1.length === 0) return str2.length;
     if (str2.length === 0) return str1.length;
@@ -106,12 +109,12 @@ function getTypoCount(str1, str2) {
 // Checks if the user's guess is "close enough" to any of the AI's guesses
 function isCloseEnough(userGuess, aiArray) {
     for (let aiWord of aiArray) {
-        // 1. Exact Match or Substring (e.g., "whistle" is in "whistling")
+        // Exact Match or Substring (e.g., "whistle" is in "whistling")
         if (aiWord.includes(userGuess) || userGuess.includes(aiWord)) {
             return true;
         }
         
-        // 2. Typo Match (Allow 1 typo for short words, 2 typos for long words)
+        // Typo Match (Allow 1 typo for short words, 2 typos for long words)
         let allowedTypos = aiWord.length > 5 ? 2 : 1;
         if (getTypoCount(userGuess, aiWord) <= allowedTypos) {
             return true;
@@ -127,16 +130,16 @@ document.getElementById('submit-guess').onclick = () => {
     // Get user guess and clean it up (remove spaces, make lowercase)
     const userGuess = document.getElementById('guess-input').value.trim().toLowerCase();
     
+    // Switch to Result Screen
     document.getElementById('guesser-screen').classList.add('hidden');
     document.getElementById('result-screen').classList.remove('hidden');
     document.getElementById('status').innerText = "The Results!";
     
-    // Show the user ALL the things the AI thought it was
-    // .join(", ") turns the array ["dog", "animal"] into "dog, animal"
+    // Populate the text
     document.getElementById('ai-guess').innerText = aiTopGuesses.join(", ");
     document.getElementById('user-guess').innerText = userGuess;
 
-    // Use our custom fuzzy match function to decide the winner
+    // Decide the winner using the fuzzy match
     if (isCloseEnough(userGuess, aiTopGuesses)) {
         document.getElementById('match-status').innerText = "✅ YOU MATCHED THE AI!";
         document.getElementById('match-status').style.color = "#4ade80"; // Green text
@@ -150,8 +153,6 @@ document.getElementById('submit-guess').onclick = () => {
 // 5. Reset Game Loop
 // -----------------------------------------
 window.resetGame = () => {
+    // Reloads the page to clear memory and start fresh
     location.reload(); 
 };
-
-// Start the setup when the script loads
-initAI();
