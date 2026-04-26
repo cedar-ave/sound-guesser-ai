@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Sound Matcher</title>
+    <title>Echo Derby AI</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-audio@0.10.0/audio_bundle.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <div id="game-container">
-        <h1>🔊 Echo Derby AI</h1>
+        <img src="horse.png" alt="Echo Derby Mascot" class="game-logo">
+        <h1>Echo Derby AI</h1>
         
         <div id="status">Loading AI Brain...</div>
 
         <div id="performer-screen" class="hidden">
             <p><strong>Performer:</strong> Click the button and make a sound!</p>
-            <button id="record-btn">Record Sound (3s)</button>
+            <button id="record-btn">Record Sound (5s)</button>
         </div>
 
         <div id="guesser-screen" class="hidden">
@@ -31,6 +31,7 @@
             <button onclick="resetGame()">Next Round</button>
         </div>
     </div>
+    
     <script type="module" src="script.js"></script>
 </body>
 </html>
