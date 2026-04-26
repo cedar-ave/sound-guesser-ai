@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Sound Matcher</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-audio@0.10.0/audio_bundle.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div id="game-container">
+        <h1>🔊 Sound Matcher AI</h1>
+        
+        <div id="status">Loading AI Brain...</div>
+
+        <div id="performer-screen" class="hidden">
+            <p><strong>Performer:</strong> Click the button and make a sound!</p>
+            <button id="record-btn">Record Sound (3s)</button>
+        </div>
+
+        <div id="guesser-screen" class="hidden">
+            <p><strong>Guesser:</strong> What was that sound?</p>
+            <input type="text" id="guess-input" placeholder="Type your guess...">
+            <button id="submit-guess">Submit Guess</button>
+        </div>
+
+        <div id="result-screen" class="hidden">
+            <h2 id="match-status"></h2>
+            <p>The AI thought it was: <span id="ai-guess"></span></p>
+            <p>You guessed: <span id="user-guess"></span></p>
+            <button onclick="resetGame()">Next Round</button>
+        </div>
+    </div>
+    <script type="module" src="script.js"></script>
+</body>
+</html>
