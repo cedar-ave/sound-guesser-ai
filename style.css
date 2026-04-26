@@ -5,6 +5,7 @@ body {
     display: flex;
     justify-content: center;
     padding-top: 50px;
+    margin: 0; /* Prevents default browser margins from causing scrollbars */
 }
 
 #game-container {
@@ -12,11 +13,22 @@ body {
     padding: 20px;
     border-radius: 10px;
     text-align: center;
-    width: 500px;
+    width: 90%; /* Shrinks nicely on mobile... */
+    max-width: 500px; /* ...but never gets larger than your preferred 500px */
+    box-sizing: border-box; /* Keeps padding inside the width limit */
 }
 
 .hidden {
     display: none;
+}
+
+/* --- NEW: Image Handling for the Mascot --- */
+.game-logo {
+    width: 120px; 
+    height: auto;
+    margin: 0 auto 10px auto; 
+    display: block;
+    border-radius: 10px; 
 }
 
 button {
@@ -27,19 +39,31 @@ button {
     color: white;
     border: none;
     border-radius: 5px;
+    touch-action: manipulation; /* Prevents "double-tap to zoom" on mobile */
+}
+
+/* Gray out the button when it says "Listening..." */
+button:disabled {
+    background: #555;
+    color: #999;
+    cursor: not-allowed;
 }
 
 input {
     padding: 10px;
     width: 80%;
+    box-sizing: border-box; 
     border-radius: 5px;
     border: none;
+    margin-top: 10px;
 }
 
+/* --- Your Custom Attribution Class --- */
 .attribution {
     font-size: .75em;
     font-weight: normal;
     text-transform: uppercase;
     margin-top: -10px;
     margin-bottom: 30px;
+    color: #aaa; /* Slightly muted so it doesn't fight with the main title */
 }
