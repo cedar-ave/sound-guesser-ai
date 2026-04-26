@@ -1,19 +1,44 @@
 let aiTopGuesses = [];
 
+// -----------------------------------------
 // 1. Initialize UI 
+// -----------------------------------------
 document.getElementById('status').innerText = "AI Ready! Pass to Performer.";
 document.getElementById('performer-screen').classList.remove('hidden');
 
+// -----------------------------------------
 // 2. Handle Recording and AI Request
+// -----------------------------------------
 document.getElementById('record-btn').onclick = async () => {
+    const recordBtn = document.getElementById('record-btn');
+    recordBtn.disabled = true;
+
+    // Request microphone access FIRST so permission popups don't ruin the timer
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mediaRecorder = new MediaRecorder(stream);
     const audioChunks = [];
 
-    const recordBtn = document.getElementById('record-btn');
-    recordBtn.innerText = "🔴 Listening... (3s)";
-    recordBtn.disabled = true;
+    // --- NEW: Countdown Logic ---
+    let countdown = 3;
+    recordBtn.innerText = `Get ready... ${countdown}`;
 
+    const timer = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+            recordBtn.innerText = `Get ready... ${countdown}`;
+        } else {
+            // Stop the countdown timer
+            clearInterval(timer);
+            
+            // Start the actual recording
+            recordBtn.innerText = "🔴 Listening... (5s)";
+            startRecording(stream, mediaRecorder, audioChunks, recordBtn);
+        }
+    }, 1000); // 1000ms = 1 second
+};
+
+// Helper function to handle the actual recording so the code stays clean
+function startRecording(stream, mediaRecorder, audioChunks, recordBtn) {
     mediaRecorder.addEventListener("dataavailable", event => {
         audioChunks.push(event.data);
     });
@@ -21,7 +46,6 @@ document.getElementById('record-btn').onclick = async () => {
     mediaRecorder.addEventListener("stop", async () => {
         document.getElementById('status').innerText = "Smart AI is thinking...";
 
-        // NEW: Dynamically grab the correct audio format for the user's browser
         const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(audioChunks, { type: actualMimeType });
         
@@ -31,7 +55,6 @@ document.getElementById('record-btn').onclick = async () => {
             const base64Audio = reader.result.split(',')[1]; 
 
             try {
-                // Send BOTH the audio and the format type to Netlify
                 const response = await fetch('/.netlify/functions/judge', {
                     method: 'POST',
                     body: JSON.stringify({ 
@@ -46,7 +69,6 @@ document.getElementById('record-btn').onclick = async () => {
                     aiTopGuesses = data.guesses;
                     console.log("Smart AI Guesses:", aiTopGuesses);
                 } else if (data.error) {
-                    // NEW: If there's an error, set it as the "guess" so you can read it on screen
                     aiTopGuesses = [data.error];
                     console.error("Backend Error:", data.error);
                 } else {
@@ -63,16 +85,20 @@ document.getElementById('record-btn').onclick = async () => {
             document.getElementById('guesser-screen').classList.remove('hidden');
             document.getElementById('status').innerText = "Pass the laptop!";
             
-            recordBtn.innerText = "Record Sound (3s)";
+            recordBtn.innerText = "Record Sound (5s)";
             recordBtn.disabled = false;
         };
     });
 
     mediaRecorder.start();
-    setTimeout(() => { mediaRecorder.stop(); }, 3000);
-};
+    
+    // --- NEW: Change 3000 to 5000 for a 5-second recording ---
+    setTimeout(() => { mediaRecorder.stop(); }, 5000);
+}
 
+// -----------------------------------------
 // 3. Fuzzy Matching Logic
+// -----------------------------------------
 function getTypoCount(str1, str2) {
     if (str1.length === 0) return str2.length;
     if (str2.length === 0) return str1.length;
@@ -104,7 +130,9 @@ function isCloseEnough(userGuess, aiArray) {
     return false;
 }
 
+// -----------------------------------------
 // 4. Handle the Guess and Reveal
+// -----------------------------------------
 document.getElementById('submit-guess').onclick = () => {
     const userGuess = document.getElementById('guess-input').value.trim().toLowerCase();
     
@@ -115,7 +143,6 @@ document.getElementById('submit-guess').onclick = () => {
     document.getElementById('ai-guess').innerText = aiTopGuesses.join(", ");
     document.getElementById('user-guess').innerText = userGuess;
 
-    // Prevents matching against error messages
     if (aiTopGuesses[0].startsWith("Google Error") || aiTopGuesses[0].startsWith("error")) {
          document.getElementById('match-status').innerText = "⚠️ GAME BROKE!";
          document.getElementById('match-status').style.color = "#facc15"; 
@@ -129,7 +156,9 @@ document.getElementById('submit-guess').onclick = () => {
     }
 };
 
+// -----------------------------------------
 // 5. Reset Game Loop
+// -----------------------------------------
 window.resetGame = () => {
     location.reload(); 
 };
