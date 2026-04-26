@@ -18,7 +18,7 @@ document.getElementById('record-btn').onclick = async () => {
     const mediaRecorder = new MediaRecorder(stream);
     const audioChunks = [];
 
-    // --- NEW: Countdown Logic ---
+    // Countdown Logic
     let countdown = 3;
     recordBtn.innerText = `Get ready... ${countdown}`;
 
@@ -34,17 +34,19 @@ document.getElementById('record-btn').onclick = async () => {
             recordBtn.innerText = "🔴 Listening... (5s)";
             startRecording(stream, mediaRecorder, audioChunks, recordBtn);
         }
-    }, 1000); // 1000ms = 1 second
+    }, 1000); 
 };
 
-// Helper function to handle the actual recording so the code stays clean
+// Helper function to handle the actual recording
 function startRecording(stream, mediaRecorder, audioChunks, recordBtn) {
     mediaRecorder.addEventListener("dataavailable", event => {
         audioChunks.push(event.data);
     });
 
     mediaRecorder.addEventListener("stop", async () => {
+        // --- THE FIX: Immediately update UI so they know the mic is off ---
         document.getElementById('status').innerText = "Smart AI is thinking...";
+        recordBtn.innerText = "⏳ Processing..."; 
 
         const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(audioChunks, { type: actualMimeType });
@@ -85,6 +87,7 @@ function startRecording(stream, mediaRecorder, audioChunks, recordBtn) {
             document.getElementById('guesser-screen').classList.remove('hidden');
             document.getElementById('status').innerText = "Pass the laptop!";
             
+            // Reset the button for the next turn
             recordBtn.innerText = "Record Sound (5s)";
             recordBtn.disabled = false;
         };
@@ -92,7 +95,7 @@ function startRecording(stream, mediaRecorder, audioChunks, recordBtn) {
 
     mediaRecorder.start();
     
-    // --- NEW: Change 3000 to 5000 for a 5-second recording ---
+    // Stop recording after 5 seconds
     setTimeout(() => { mediaRecorder.stop(); }, 5000);
 }
 
