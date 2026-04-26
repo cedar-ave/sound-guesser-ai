@@ -57,7 +57,7 @@ function startRecording(stream, mediaRecorder, audioChunks, recordBtn) {
     mediaRecorder.addEventListener("stop", async () => {
         // --- THE FIX: Immediately update UI so they know the mic is off ---
         document.getElementById('status').innerText = "Smart AI is thinking...";
-        recordBtn.innerText = "⏳ Processing..."; 
+        recordBtn.innerText = "⏳ Processing... (this may take a few seconds)"; 
 
         const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(audioChunks, { type: actualMimeType });
