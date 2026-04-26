@@ -36,7 +36,7 @@ input {
     border: none;
 }
 
-h2 {
+.attribution {
     font-size: .75em;
     font-weight: normal;
     text-transform: uppercase;
