@@ -1,51 +1,43 @@
-// Global variable to store the AI's answers
 let aiTopGuesses = [];
 
-// -----------------------------------------
-// 1. Initialize UI (No downloads needed anymore!)
-// -----------------------------------------
-// The AI is on the server now, so the game is instantly ready.
+// 1. Initialize UI 
 document.getElementById('status').innerText = "AI Ready! Pass to Performer.";
 document.getElementById('performer-screen').classList.remove('hidden');
 
-// -----------------------------------------
 // 2. Handle Recording and AI Request
-// -----------------------------------------
 document.getElementById('record-btn').onclick = async () => {
-    // Request microphone access
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mediaRecorder = new MediaRecorder(stream);
     const audioChunks = [];
 
-    // Update UI
     const recordBtn = document.getElementById('record-btn');
     recordBtn.innerText = "🔴 Listening... (3s)";
     recordBtn.disabled = true;
 
-    // Collect audio data
     mediaRecorder.addEventListener("dataavailable", event => {
         audioChunks.push(event.data);
     });
 
-    // Process audio when recording stops
     mediaRecorder.addEventListener("stop", async () => {
         document.getElementById('status').innerText = "Smart AI is thinking...";
 
-        // Combine chunks into a single webm audio file
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        // NEW: Dynamically grab the correct audio format for the user's browser
+        const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunks, { type: actualMimeType });
         
-        // Convert the audio file into a Base64 string so we can send it as text
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = async () => {
-            // Remove the "data:audio/webm;base64," prefix to get raw data
             const base64Audio = reader.result.split(',')[1]; 
 
             try {
-                // Send it to your hidden Netlify Function
+                // Send BOTH the audio and the format type to Netlify
                 const response = await fetch('/.netlify/functions/judge', {
                     method: 'POST',
-                    body: JSON.stringify({ audioBase64: base64Audio })
+                    body: JSON.stringify({ 
+                        audioBase64: base64Audio,
+                        mimeType: actualMimeType 
+                    })
                 });
 
                 const data = await response.json();
@@ -53,41 +45,34 @@ document.getElementById('record-btn').onclick = async () => {
                 if (data.guesses) {
                     aiTopGuesses = data.guesses;
                     console.log("Smart AI Guesses:", aiTopGuesses);
+                } else if (data.error) {
+                    // NEW: If there's an error, set it as the "guess" so you can read it on screen
+                    aiTopGuesses = [data.error];
+                    console.error("Backend Error:", data.error);
                 } else {
-                    aiTopGuesses = ["error: couldn't understand audio"];
+                    aiTopGuesses = ["error: unknown failure"];
                 }
             } catch (error) {
-                console.error("Failed to reach Netlify Function:", error);
+                console.error("Failed to reach Netlify:", error);
                 aiTopGuesses = ["error: server connection failed"];
             }
 
-            // Shut down the microphone
             stream.getTracks().forEach(track => track.stop());
 
-            // Update UI for the Guesser
             document.getElementById('performer-screen').classList.add('hidden');
             document.getElementById('guesser-screen').classList.remove('hidden');
             document.getElementById('status').innerText = "Pass the laptop!";
             
-            // Reset button state
             recordBtn.innerText = "Record Sound (3s)";
             recordBtn.disabled = false;
         };
     });
 
-    // Start recording
     mediaRecorder.start();
-
-    // Automatically stop after 3 seconds
-    setTimeout(() => {
-        mediaRecorder.stop();
-    }, 3000);
+    setTimeout(() => { mediaRecorder.stop(); }, 3000);
 };
 
-// -----------------------------------------
-// 3. Fuzzy Matching Logic (Typo Forgiveness)
-// -----------------------------------------
-// Calculates how many typos exist between two words
+// 3. Fuzzy Matching Logic
 function getTypoCount(str1, str2) {
     if (str1.length === 0) return str2.length;
     if (str2.length === 0) return str1.length;
@@ -106,15 +91,11 @@ function getTypoCount(str1, str2) {
     return matrix[str2.length][str1.length];
 }
 
-// Checks if the user's guess is "close enough" to any of the AI's guesses
 function isCloseEnough(userGuess, aiArray) {
     for (let aiWord of aiArray) {
-        // Exact Match or Substring (e.g., "whistle" is in "whistling")
         if (aiWord.includes(userGuess) || userGuess.includes(aiWord)) {
             return true;
         }
-        
-        // Typo Match (Allow 1 typo for short words, 2 typos for long words)
         let allowedTypos = aiWord.length > 5 ? 2 : 1;
         if (getTypoCount(userGuess, aiWord) <= allowedTypos) {
             return true;
@@ -123,36 +104,32 @@ function isCloseEnough(userGuess, aiArray) {
     return false;
 }
 
-// -----------------------------------------
 // 4. Handle the Guess and Reveal
-// -----------------------------------------
 document.getElementById('submit-guess').onclick = () => {
-    // Get user guess and clean it up (remove spaces, make lowercase)
     const userGuess = document.getElementById('guess-input').value.trim().toLowerCase();
     
-    // Switch to Result Screen
     document.getElementById('guesser-screen').classList.add('hidden');
     document.getElementById('result-screen').classList.remove('hidden');
     document.getElementById('status').innerText = "The Results!";
     
-    // Populate the text
     document.getElementById('ai-guess').innerText = aiTopGuesses.join(", ");
     document.getElementById('user-guess').innerText = userGuess;
 
-    // Decide the winner using the fuzzy match
-    if (isCloseEnough(userGuess, aiTopGuesses)) {
+    // Prevents matching against error messages
+    if (aiTopGuesses[0].startsWith("Google Error") || aiTopGuesses[0].startsWith("error")) {
+         document.getElementById('match-status').innerText = "⚠️ GAME BROKE!";
+         document.getElementById('match-status').style.color = "#facc15"; 
+    }
+    else if (isCloseEnough(userGuess, aiTopGuesses)) {
         document.getElementById('match-status').innerText = "✅ YOU MATCHED THE AI!";
-        document.getElementById('match-status').style.color = "#4ade80"; // Green text
+        document.getElementById('match-status').style.color = "#4ade80"; 
     } else {
         document.getElementById('match-status').innerText = "❌ NO MATCH";
-        document.getElementById('match-status').style.color = "#f87171"; // Red text
+        document.getElementById('match-status').style.color = "#f87171"; 
     }
 };
 
-// -----------------------------------------
 // 5. Reset Game Loop
-// -----------------------------------------
 window.resetGame = () => {
-    // Reloads the page to clear memory and start fresh
     location.reload(); 
 };
