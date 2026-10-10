@@ -93,7 +93,7 @@ sound-guesser/
 ├── index.html                  # Game screens: performer, guesser, result
 ├── style.css                   # Styling
 ├── script.js                   # Recording, API call, fuzzy matching, game flow
-├── horse.png                   # Echo Derby mascot
+├── horse.png                   # Sound Guesser AI mascot, in honor of Derby Day
 └── netlify/
     └── functions/
         └── judge.js            # Serverless AI judge (Gemini 2.5 Flash)
